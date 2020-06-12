@@ -27,9 +27,7 @@ function breeze
     set -q __fish_breeze_num_before_filename
     or set -g __fish_breeze_num_before_filename "false"
 
-
     set -l file_names __fish_breeze_get_file_idx
-
 
     for line in (git -c color.status=always status)
         # A line that contains information about a gitfile will either be:
@@ -74,11 +72,12 @@ function breeze
                         break
                     end
                 end
+                set idx (math "$idx + 1")
             end
             # if no action were able to perform, print the original line
             not $found
             and echo $line
-            
+
         else
             # this line is not a file status line
             echo $line
