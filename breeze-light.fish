@@ -1,33 +1,16 @@
 
-function __fish_breeze_get_file_idx
-    # set file_status (git status --porcelain)
-    set file_status (git status --porcelain)
-    # echo $file_status
-
-    set -l file_names
-
-    for line in $file_status
-        # in git status --porcelain, the first two character is for
-        # file status, and the third is a space. This is consistent,
-        # so we can simply use substring rather than complex regex
-        set -a file_names (string sub --start 4 $line )
-    end
-
-    # for file in $file_names
-    #     set -l idx (contains -i -- $file $file_names)
-    #     echo "[$idx] $file"
-    # end
-
-    return file_names
-end
 
 function breeze
     # if true, place [n] in front of the filename
     # else, place in front of the entire status.
-    set -q __fish_breeze_num_before_filename
-    or set -g __fish_breeze_num_before_filename "false"
+    set -q __fish_breeze_show_num_before_fname
+    or set -g __fish_breeze_show_num_before_fname "false"
 
-    set -l file_names __fish_breeze_get_file_idx
+    # get file status from git
+    # in git status --porcelain, the first two character is for
+    # file status, and the third is a space. This is consistent,
+    # so we can simply use substring rather than complex regex
+    set -l file_names (git status --porcelain | string sub --start 4)
 
     for line in (git -c color.status=always status)
         # A line that contains information about a gitfile will either be:
@@ -43,10 +26,17 @@ function breeze
             # This must be a line that indicates a file within it
             
             # loop through the list of file and find exact match
-            set -l idx 1
+            set -l idx 0
             set -l found false
             for file in $file_names
-                if test $__fish_breeze_num_before_filename = "true"
+                set -l idx (math "$idx + 1")
+
+                # check if this line contain the proposing file
+                if not string match -q "*$file*" "$line"
+                    continue
+                end
+
+                if test $__fish_breeze_show_num_before_fname = "true"
                     # This is to place number right before the filename
                     if string replace -f "$file" "[$idx] $file" $line
                         set found true
@@ -72,7 +62,6 @@ function breeze
                         break
                     end
                 end
-                set idx (math "$idx + 1")
             end
             # if no action were able to perform, print the original line
             not $found
