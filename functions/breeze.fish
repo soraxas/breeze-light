@@ -1,7 +1,5 @@
 
-
-
-
+# main function
 function breeze
     set -l cmd $argv[1]
     set -e argv[1]
@@ -17,24 +15,34 @@ function breeze
     
     else if test "$cmd" = "add"
 
-        set -l show_status false
-        if set -l i (contains -i -- '-s' $argv)
-            set -e argv[$i]
-            set show_status true
-        end
-        if set -l i (contains -i -- '--show-status' $argv)
-            set -e argv[$i]
-            set show_status true
+        argparse --ignore-unknown 's/show-status' -- $argv
+
+        # check for message flag
+        set -l msg_idx (contains --index -- '-m' $argv)
+        if test -n  "$msg_idx"
+            if test $msg_idx -lt (count $argv)
+                # there are messages after the -m message. (sanity check)
+                set commit_msg $argv[(math "$msg_idx + 1")..-1]
+                set argv -- $argv[1..(math "$msg_idx - 1")]
+            end
         end
         
         # add if it is non-empty
         set -l target_files (__breeze_light_parse_user_input $argv)
         test -n "$target_files"
         and eval "git add $target_files"
+        test $status -eq 0
+        or return $status
 
-        if $show_status
-            __breeze_light_show_status
-        end
+        # perform show status if -s is specified
+        set -q _flag_show_status
+        and __breeze_light_show_status
+
+        # perform commit with the message being all args after the flag
+        set -q commit_msg
+        and echo "> Committing with message '$commit_msg'"
+        and git commit -m "$commit_msg"
+
     else
         printf "Usage: breeze <COMMAND> [COMMAND OPTIONS]\n\n"
         printf "COMMAND: %s\n" "status"
@@ -46,6 +54,8 @@ function breeze
         printf "OPTIONS:\n"
         printf "%s\n" "-s --show-status"
         printf "\t%s\n" "Display status afterwards, for easy reference."
+        printf "%s\n" "-m"
+        printf "\t%s\n" "Immediately commit, and everything after this flag will the message."
         return 1
     end
 
@@ -60,6 +70,7 @@ function __breeze_light_helper_get_bracket_num
     set -l spaces_needed (string repeat ' ' -n (math "$max_num_length - $num_length"))
     echo "$spaces_needed"'['$argv[1]']'
 end
+
 
 function __breeze_light_show_status -d "add numeric to git status"
     # if true, place [n] in front of the filename
