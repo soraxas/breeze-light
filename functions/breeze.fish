@@ -72,12 +72,7 @@ function __breeze_light_helper_get_bracket_num
 end
 
 
-function __breeze_light_show_status -d "add numeric to git status"
-    # if true, place [n] in front of the filename
-    # else, place in front of the entire status.
-    set -q __fish_breeze_show_num_before_fname
-    or set -g __fish_breeze_show_num_before_fname "false"
-
+function __breeze_light_get_filelist -d "retrieve list of files from this repo"
     # get file status from git
     # in git status --porcelain, the first two character is for
     # file status, and the third is a space. This is consistent,
@@ -85,6 +80,33 @@ function __breeze_light_show_status -d "add numeric to git status"
     # set -l file_names (git status --porcelain | string sub --start 4)
     # Going to use git status short instead, as it supports relative path
     set -l file_names (git status --short | string sub --start 4)
+    # if a file is renamed, it will be shown as XXXXX -> YYYYYY
+    # add the two to file list as well.
+    set -l i 1
+    set -l num_files (count $file_names)
+    while test $i -le $num_files
+        # try to split
+        set -l try_split (string split -- ' -> ' $file_names[$i])
+        if test (count $try_split) -eq 2
+            # append both to end of list
+            set -a file_names $try_split[1]
+            set -a file_names $try_split[2]
+        end
+        set i (math "$i + 1")
+    end
+    printf '%s\n' $file_names
+end
+
+
+
+function __breeze_light_show_status -d "add numeric to git status"
+    # if true, place [n] in front of the filename
+    # else, place in front of the entire status.
+    set -q __fish_breeze_show_num_before_fname
+    or set -g __fish_breeze_show_num_before_fname "false"
+
+    __breeze_light_get_filelist
+    set -l file_names (__breeze_light_get_filelist)
     set -l num_files (count $file_names)
 
     for line in (git -c color.status=always status)
@@ -152,7 +174,8 @@ end
 
 function __breeze_light_parse_user_input -d "parse user's numeric input to breeze"
     # set -l file_names (git status --porcelain | string sub --start 4)
-    set -l file_names (git status --short | string sub --start 4)
+    set -l file_names (__breeze_light_get_filelist)
+
     set -l num_files (count $file_names)
 
     function __breeze_light_sanity_chk_start_num
