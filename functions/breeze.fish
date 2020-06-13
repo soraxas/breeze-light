@@ -3,10 +3,19 @@
 
 
 function breeze
-    if test "$argv[1]" = "status"
+    set -l cmd $argv[1]
+    set -e argv[1]
+    
+    if test "$cmd" = "status"
         __breeze_light_show_status
-    else if test "$argv[1]" = "add"
-        set -e argv[1]
+
+    else if test "$cmd" = "diff"
+        git diff (__breeze_light_parse_user_input $argv)
+
+    else if test "$cmd" = "checkout"
+        git checkout (__breeze_light_parse_user_input $argv)
+    
+    else if test "$cmd" = "add"
 
         set -l show_status false
         if set -l i (contains -i -- '-s' $argv)
@@ -18,7 +27,10 @@ function breeze
             set show_status true
         end
         
-        __breeze_light_parse_user_input $argv
+        # add if it is non-empty
+        set -l target_files (__breeze_light_parse_user_input $argv)
+        test -n "$target_files"
+        and git add $target_files
 
         if $show_status
             __breeze_light_show_status
@@ -214,7 +226,5 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
         end
 
     end
-    # add if it is non-empty
-    test -n "$target_files"
-    and git add $target_files
+    echo $target_files
 end
