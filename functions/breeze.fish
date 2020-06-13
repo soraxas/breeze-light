@@ -1,6 +1,26 @@
 
 
+
+
 function breeze
+    if test "$argv[1]" = "status"
+        __breeze_light_show_status
+    else if test "$argv[1]" = "add"
+        __breeze_light_parse_user_input
+    else
+        printf "Usage: breeze <COMMAND> [COMMAND ARGS]\n\n"
+        printf "COMMAND: %s\n" "status"
+        printf "         %s\n" "add"
+        printf "\n"
+        printf "%s\t%s\n" "status" "Add numeric number to git status"
+        printf "%s\t%s\n" "add" "Git add with numeric number"
+        return 1
+    end
+
+end
+
+
+function __breeze_light_show_status -d "add numeric to git status"
     # if true, place [n] in front of the filename
     # else, place in front of the entire status.
     set -q __fish_breeze_show_num_before_fname
@@ -24,7 +44,7 @@ function breeze
 
             # This line has some sort of escaped color code in it.
             # This must be a line that indicates a file within it
-            
+
             # loop through the list of file and find exact match
             set -l idx 0
             set -l found false
@@ -74,18 +94,12 @@ function breeze
     end
 end
 
-breeze
 
-
-
-function parse_user_input
-
+function __breeze_light_parse_user_input -d "parse user's numeric input to breeze"
     set -l file_names (git status --porcelain | string sub --start 4)
+    set -l num_files (count $file_names)
 
-    set num_files (count $file_names)
-
-
-    function __breeze_sanity_chk_start_num
+    function __breeze_light_sanity_chk_start_num
         if not test $argv[1] -gt 0
             echo "[ERROR]: starting num '$argv[1]' must be > 0. Skipping."
             return 1
@@ -93,7 +107,7 @@ function parse_user_input
         return 0
     end
 
-    function __breeze_sanity_chk_end_num
+    function __breeze_light_sanity_chk_end_num
         set -l num_files $argv[2]
         if not test $argv[1] -le $num_files 
             echo "[ERROR]: ending num '$argv[1]' must be <= range '$num_files'. Skipping."
@@ -102,7 +116,7 @@ function parse_user_input
         return 0
     end
 
-    function __breeze_sanity_chk_start_end_num
+    function __breeze_light_sanity_chk_start_end_num
         # ensure n is smaller than m
         if not test $argv[1] -lt $argv[2]
             echo "[ERROR]: starting num '$argv[1]' must be < ending num '$argv[2]'. Skipping."
@@ -111,7 +125,7 @@ function parse_user_input
         return 0
     end
 
-    function __breeze_echo_range_files
+    function __breeze_light_echo_range_files
         set -l start_n $argv[1]
         set -l end_n $argv[2]
         set -e argv[1]
@@ -133,45 +147,44 @@ function parse_user_input
         # for case n-m
         else if string match -q -r -- '^[0-9]+-[0-9]+$' $arg
             set -l idxes (string split '-' $arg)
-            __breeze_sanity_chk_start_end_num $idxes[1] $idxes[2]
+            __breeze_light_sanity_chk_start_end_num $idxes[1] $idxes[2]
             or continue
-            __breeze_sanity_chk_start_num $idxes[1]
+            __breeze_light_sanity_chk_start_num $idxes[1]
             or continue
-            __breeze_sanity_chk_end_num $idxes[2] $num_files
+            __breeze_light_sanity_chk_end_num $idxes[2] $num_files
             or continue
 
-            set -a target_files (__breeze_echo_range_files $idxes[1] $idxes[2] $file_names)
+            set -a target_files (__breeze_light_echo_range_files $idxes[1] $idxes[2] $file_names)
 
         # for case n- (implied end)
         else if string match -q -r -- '^[0-9]+-$' $arg
             # ensure n is > 0
             set arg (string sub --length (math (string length -- $arg)"-1") -- $arg)
 
-            __breeze_sanity_chk_start_num $arg
+            __breeze_light_sanity_chk_start_num $arg
             or continue
-            __breeze_sanity_chk_end_num $arg $num_files
+            __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
           
-            set -a target_files (__breeze_echo_range_files $arg $num_files $file_names)
+            set -a target_files (__breeze_light_echo_range_files $arg $num_files $file_names)
 
         # for case -m (implied start)
         else if string match -q -r -- '^-[0-9]+$' $arg
             # ensure m is < num_files
             set arg (string sub --start 2 -- $arg)
 
-            __breeze_sanity_chk_start_num $arg
+            __breeze_light_sanity_chk_start_num $arg
             or continue
-            __breeze_sanity_chk_end_num $arg $num_files
+            __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
           
-            set -a target_files (__breeze_echo_range_files 1 $arg $file_names)
+            set -a target_files (__breeze_light_echo_range_files 1 $arg $file_names)
 
         # probably is file name
         else
             set -a target_files $arg
         end
 
-        # echo $arg
     end
     echo $target_files
 end
