@@ -105,7 +105,6 @@ function __breeze_light_show_status -d "add numeric to git status"
     set -q __fish_breeze_show_num_before_fname
     or set -g __fish_breeze_show_num_before_fname "false"
 
-    __breeze_light_get_filelist
     set -l file_names (__breeze_light_get_filelist)
     set -l num_files (count $file_names)
 
@@ -123,46 +122,49 @@ function __breeze_light_show_status -d "add numeric to git status"
             # This must be a line that indicates a file within it
 
             # loop through the list of file and find exact match
-            set -l idx 0
-            set -l found false
-            for file in $file_names
-                set -l idx (math "$idx + 1")
 
-                # check if this line contain the proposing file
-                if not string match -q "*$file*" "$line"
-                    continue
-                end
-
-                if test $__fish_breeze_show_num_before_fname = "true"
-                    # This is to place number right before the filename
-                    if string replace -f "$file" "[$idx] $file" $line
-                        set found true
-                        break
-                    end
-
-                else
-                    # This is to place number right after the first ANSI escape color code
-
-                    # this finds the index of the starting color code, in the format of:
-                    # i j   ->  where i is the starting idx of the token and j is the length
-                    if set -l start_color_code (string match --index -r '\e\[[0-9;]+m' $line | string split ' ')
-
-                        # line prefix (i.e. whitespace + colorcode)
-                        set -l prefix (string sub --length (math "$start_color_code[1] + $start_color_code[2] - 1") $line)
-                        # line main (i.e. file status + the suffix bits)
-                        set -l suffix (string sub --start (math "$start_color_code[1] + $start_color_code[2]") $line)
-
-                        printf $prefix"%s " (__breeze_light_helper_get_bracket_num $idx $num_files)
-                        printf $suffix"\n"
-
-                        set found true
-                        break
+            # keep track of the highest matched fname
+            set -l max_match_length 0
+            set -l idx -1
+            for i in (seq 1 (count $file_names))
+                set -l file $file_names[$i]
+                # find a file that has the maximum matched characters
+                if string match -q "*$file*" "$line"
+                    set -l _tmp_length (string length -- $file)
+                    if test $_tmp_length -gt $max_match_length
+                        set max_match_length $_tmp_length
+                        set idx $i
                     end
                 end
             end
-            # if no action were able to perform, print the original line
-            not $found
-            and echo $line
+
+            if test $idx -le 0
+                # couldn't find a matching file?
+                # print the original line
+                echo $line
+                continue
+            end
+
+            if test $__fish_breeze_show_num_before_fname = "true"
+                # This is to place number right before the filename
+                string replace -f "$file" "[$idx] $file" $line
+
+            else
+                # This is to place number right after the first ANSI escape color code
+
+                # this finds the index of the starting color code, in the format of:
+                # i j   ->  where i is the starting idx of the token and j is the length
+                if set -l start_color_code (string match --index -r '\e\[[0-9;]+m' $line | string split ' ')
+
+                    # line prefix (i.e. whitespace + colorcode)
+                    set -l prefix (string sub --length (math "$start_color_code[1] + $start_color_code[2] - 1") $line)
+                    # line main (i.e. file status + the suffix bits)
+                    set -l suffix (string sub --start (math "$start_color_code[1] + $start_color_code[2]") $line)
+
+                    printf $prefix"%s " (__breeze_light_helper_get_bracket_num $idx $num_files)
+                    printf $suffix"\n"
+                end
+            end
 
         else
             # this line is not a file status line
