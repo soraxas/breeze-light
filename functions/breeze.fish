@@ -6,14 +6,34 @@ function breeze
     if test "$argv[1]" = "status"
         __breeze_light_show_status
     else if test "$argv[1]" = "add"
-        __breeze_light_parse_user_input
+        set -e argv[1]
+
+        set -l show_status false
+        if set -l i (contains -i -- '-s' $argv)
+            set -e argv[$i]
+            set show_status true
+        end
+        if set -l i (contains -i -- '--show-status' $argv)
+            set -e argv[$i]
+            set show_status true
+        end
+        
+        __breeze_light_parse_user_input $argv
+
+        if $show_status
+            __breeze_light_show_status
+        end
     else
-        printf "Usage: breeze <COMMAND> [COMMAND ARGS]\n\n"
+        printf "Usage: breeze <COMMAND> [COMMAND OPTIONS]\n\n"
         printf "COMMAND: %s\n" "status"
-        printf "         %s\n" "add"
+        printf "         %s\t\n" "add [-s|--show-status]"
         printf "\n"
         printf "%s\t%s\n" "status" "Add numeric number to git status"
         printf "%s\t%s\n" "add" "Git add with numeric number"
+        printf "\n"
+        printf "OPTIONS:\n"
+        printf "%s\n" "-s --show-status"
+        printf "\t%s\n" "Display status afterwards, for easy reference."
         return 1
     end
 
@@ -30,7 +50,9 @@ function __breeze_light_show_status -d "add numeric to git status"
     # in git status --porcelain, the first two character is for
     # file status, and the third is a space. This is consistent,
     # so we can simply use substring rather than complex regex
-    set -l file_names (git status --porcelain | string sub --start 4)
+    # set -l file_names (git status --porcelain | string sub --start 4)
+    # Going to use git status short instead, as it supports relative path
+    set -l file_names (git status --short | string sub --start 4)
 
     for line in (git -c color.status=always status)
         # A line that contains information about a gitfile will either be:
@@ -96,7 +118,8 @@ end
 
 
 function __breeze_light_parse_user_input -d "parse user's numeric input to breeze"
-    set -l file_names (git status --porcelain | string sub --start 4)
+    # set -l file_names (git status --porcelain | string sub --start 4)
+    set -l file_names (git status --short | string sub --start 4)
     set -l num_files (count $file_names)
 
     function __breeze_light_sanity_chk_start_num
@@ -142,6 +165,11 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
         # for normal case of one single numeric
         if string match -q -r -- '^[0-9]+$' $arg
+            __breeze_light_sanity_chk_start_num $arg
+            or continue
+            __breeze_light_sanity_chk_end_num $arg $num_files
+            or continue
+            
             set -a target_files (echo $file_names[$arg])
 
         # for case n-m
@@ -186,5 +214,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
         end
 
     end
-    echo $target_files
+    # add if it is non-empty
+    test -n "$target_files"
+    and git add $target_files
 end
