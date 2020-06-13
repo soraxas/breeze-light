@@ -52,6 +52,15 @@ function breeze
 end
 
 
+function __breeze_light_helper_get_bracket_num
+    # This helps to align the bracket numbers
+    # by prefixing spaces
+    set -l num_length (string length $argv[1])
+    set -l max_num_length (string length $argv[2])
+    set -l spaces_needed (string repeat ' ' -n (math "$max_num_length - $num_length"))
+    echo "$spaces_needed"'['$argv[1]']'
+end
+
 function __breeze_light_show_status -d "add numeric to git status"
     # if true, place [n] in front of the filename
     # else, place in front of the entire status.
@@ -65,6 +74,7 @@ function __breeze_light_show_status -d "add numeric to git status"
     # set -l file_names (git status --porcelain | string sub --start 4)
     # Going to use git status short instead, as it supports relative path
     set -l file_names (git status --short | string sub --start 4)
+    set -l num_files (count $file_names)
 
     for line in (git -c color.status=always status)
         # A line that contains information about a gitfile will either be:
@@ -109,7 +119,7 @@ function __breeze_light_show_status -d "add numeric to git status"
                         # line main (i.e. file status + the suffix bits)
                         set -l suffix (string sub --start (math "$start_color_code[1] + $start_color_code[2]") $line)
 
-                        printf $prefix"[$idx] "
+                        printf $prefix"%s " (__breeze_light_helper_get_bracket_num $idx $num_files)
                         printf $suffix"\n"
 
                         set found true
