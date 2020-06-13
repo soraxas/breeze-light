@@ -30,7 +30,7 @@ function breeze
         # add if it is non-empty
         set -l target_files (__breeze_light_parse_user_input $argv)
         test -n "$target_files"
-        and git add $target_files
+        and eval "git add $target_files"
 
         if $show_status
             __breeze_light_show_status
