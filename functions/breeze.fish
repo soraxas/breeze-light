@@ -34,14 +34,14 @@ function breeze
         test $status -eq 0
         or return $status
 
-        # perform show status if -s is specified
-        set -q _flag_show_status
-        and __breeze_light_show_status
-
         # perform commit with the message being all args after the flag
         set -q commit_msg
         and echo "> Committing with message '$commit_msg'"
         and git commit -m "$commit_msg"
+
+        # perform show status if -s is specified
+        set -q _flag_show_status
+        and __breeze_light_show_status
 
     else
         printf "Usage: breeze <COMMAND> [COMMAND OPTIONS]\n\n"
