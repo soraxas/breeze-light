@@ -33,10 +33,18 @@ function breeze
         and eval "git add $target_files"
         test $status -eq 0
         or return $status
+        
+        set_color green
+        echo -e ">"
+        for f in $target_files
+          test -n "$f"; and echo -e "> Added $f"
+        end
+        echo -e ">"
 
         # perform commit with the message being all args after the flag
         set -q commit_msg
         and echo "> Committing with message '$commit_msg'"
+        and set_color normal
         and git commit -m "$commit_msg"
 
         # perform show status if -s is specified
@@ -228,7 +236,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
             
-            set -a target_files (echo $file_names[$arg])
+            echo $file_names[$arg]
 
         # for case n-m
         else if string match -q -r -- '^[0-9]+-[0-9]+$' $arg
@@ -240,7 +248,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             __breeze_light_sanity_chk_end_num $idxes[2] $num_files
             or continue
 
-            set -a target_files (__breeze_light_echo_range_files $idxes[1] $idxes[2] $file_names)
+            __breeze_light_echo_range_files $idxes[1] $idxes[2] $file_names
 
         # for case n- (implied end)
         else if string match -q -r -- '^[0-9]+-$' $arg
@@ -252,7 +260,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
           
-            set -a target_files (__breeze_light_echo_range_files $arg $num_files $file_names)
+            __breeze_light_echo_range_files $arg $num_files $file_names
 
         # for case -m (implied start)
         else if string match -q -r -- '^-[0-9]+$' $arg
@@ -264,13 +272,12 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
           
-            set -a target_files (__breeze_light_echo_range_files 1 $arg $file_names)
+            __breeze_light_echo_range_files 1 $arg $file_names
 
         # probably is file name
         else
-            set -a target_files $arg
+            echo $arg
         end
 
     end
-    echo $target_files
 end
