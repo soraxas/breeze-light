@@ -1,4 +1,11 @@
 
+set __breeze_light_subcommands \
+    "status:Git status with numeric number inserted" \
+    "add:Git add with numeric number" \
+    "checkout:Git checkout with numeric number" \
+    "diff:Git diff with numeric number" \
+    "_complete:Print out completions string"
+
 # main function
 function breeze
     set -l cmd $argv[1]
@@ -51,13 +58,15 @@ function breeze
         set -q _flag_show_status
         and __breeze_light_show_status
 
+    else if test "$cmd" = "_complete"
+        printf "%s\t%s\n" (string split ':' $__breeze_light_subcommands)
+
     else
         printf "Usage: breeze <COMMAND> [COMMAND OPTIONS]\n\n"
         printf "COMMAND: %s\n" "status"
-        printf "         %s\t\n" "add [-s|--show-status]"
+        printf "         %s\t\n" "add [-s|--show-status] [-m <COMMIT_MSG>]"
         printf "\n"
-        printf "%s\t%s\n" "status" "Add numeric number to git status"
-        printf "%s\t%s\n" "add" "Git add with numeric number"
+        printf "%-8s\t%s\n" (string split ':' $__breeze_light_subcommands)
         printf "\n"
         printf "OPTIONS:\n"
         printf "%s\n" "-s --show-status"
