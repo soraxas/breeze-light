@@ -73,6 +73,11 @@ function breeze
         printf "\t%s\n" "Display status afterwards, for easy reference."
         printf "%s\n" "-m"
         printf "\t%s\n" "Immediately commit, and everything after this flag will the message."
+        printf "\n"
+        printf "NUMERIC EXAMPLE: [numeric|comma separated|range|filename]\n"
+        printf "\tbreeze add 1 2 4\n"
+        printf "\tbreeze add 4,5 7-11 13-14\n"
+        printf "\tbreeze add 2 3 foobar\n"
         return 1
     end
 
@@ -192,6 +197,9 @@ end
 
 
 function __breeze_light_parse_user_input -d "parse user's numeric input to breeze"
+    # allow using comma to separate numbers, so we will first iterate all args and
+    # split if it contains comma
+    set -l argv (string split -- ',' $argv)
     # set -l file_names (git status --porcelain | string sub --start 4)
     set -l file_names (__breeze_light_get_filelist)
 
@@ -199,7 +207,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
     function __breeze_light_sanity_chk_start_num
         if not test $argv[1] -gt 0
-            echo "[ERROR]: starting num '$argv[1]' must be > 0. Skipping."
+            echo "[ERROR]: starting num '$argv[1]' must be > 0. Skipping." 1>&2
             return 1
         end
         return 0
@@ -208,7 +216,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
     function __breeze_light_sanity_chk_end_num
         set -l num_files $argv[2]
         if not test $argv[1] -le $num_files 
-            echo "[ERROR]: ending num '$argv[1]' must be <= range '$num_files'. Skipping."
+            echo "[ERROR]: ending num '$argv[1]' must be <= range '$num_files'. Skipping." 1>&2
             return 1
         end
         return 0
@@ -217,7 +225,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
     function __breeze_light_sanity_chk_start_end_num
         # ensure n is smaller than m
         if not test $argv[1] -lt $argv[2]
-            echo "[ERROR]: starting num '$argv[1]' must be < ending num '$argv[2]'. Skipping."
+            echo "[ERROR]: starting num '$argv[1]' must be < ending num '$argv[2]'. Skipping." 1>&2
             return 1
         end
         return 0
