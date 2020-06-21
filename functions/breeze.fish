@@ -45,7 +45,7 @@ function breeze
         set -q commit_msg
         and echo "> Committing with message '$commit_msg'"
         and set_color normal
-        and git commit -m "$commit_msg"
+        and git commit -sm "$commit_msg"
 
         # perform show status if -s is specified
         set -q _flag_show_status
