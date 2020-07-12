@@ -10,6 +10,12 @@ set __breeze_light_subcommands \
 function breeze
     set -l cmd $argv[1]
     set -e argv[1]
+
+    function __breeze_light_color_echo
+        set_color green
+        echo -e $argv
+        set_color normal
+    end
     
     if test "$cmd" = "status"
         __breeze_light_show_status
@@ -37,28 +43,27 @@ function breeze
         # add if it is non-empty
         set -l target_files (__breeze_light_parse_user_input $argv)
         if test -n "$target_files"
-            set_color green
             set -l cmd git add $target_files
-            echo -e "> Running: $cmd"
-            if not set -q _flag_dry
-                eval "$cmd"
-            end
+            __breeze_light_color_echo "> Running: $cmd"
+            not set -q _flag_dry
+            and eval "$cmd"
         end
         test $status -eq 0
         or return $status
         
         # perform commit with the message being all args after the flag
-        set -q commit_msg
-        and echo "> Committing with message '$commit_msg'"
-        set_color normal
-        if set -q _flag_dry
-            return
+        if set -q commit_msg
+            __breeze_light_color_echo "> Running: git commit -sm \"$commit_msg\""
+            not set -q _flag_dry
+            and git commit -sm "$commit_msg"
         end
-        git commit -sm "$commit_msg"
 
         # perform show status if -s is specified
-        set -q _flag_show_status
-        and __breeze_light_show_status
+        if set -q _flag_show_status
+            __breeze_light_color_echo "> Running: git status"
+            not set -q _flag_dry
+            and __breeze_light_show_status
+        end
 
     else if test "$cmd" = "_complete"
         printf "%s\t%s\n" (string split ':' $__breeze_light_subcommands)
