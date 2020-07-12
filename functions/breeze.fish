@@ -22,7 +22,7 @@ function breeze
     
     else if test "$cmd" = "add"
 
-        argparse --ignore-unknown 's/show-status' -- $argv
+        argparse --ignore-unknown 's/show-status' 'd-dry' -- $argv
 
         # check for message flag
         set -l msg_idx (contains --index -- '-m' $argv)
@@ -36,24 +36,25 @@ function breeze
         
         # add if it is non-empty
         set -l target_files (__breeze_light_parse_user_input $argv)
-        test -n "$target_files"
-        and eval "git add $target_files"
+        if test -n "$target_files"
+            set_color green
+            set -l cmd git add $target_files
+            echo -e "> Running: $cmd"
+            if not set -q _flag_dry
+                eval "$cmd"
+            end
+        end
         test $status -eq 0
         or return $status
         
-        set_color green
-        echo -e ">"
-        for f in $target_files
-          test -n "$f"; and echo -e "> Added $f"
-        end
-        echo -e ">"
-
         # perform commit with the message being all args after the flag
         set -q commit_msg
         and echo "> Committing with message '$commit_msg'"
-        and set_color normal
-        and git commit -sm "$commit_msg"
         set_color normal
+        if set -q _flag_dry
+            return
+        end
+        git commit -sm "$commit_msg"
 
         # perform show status if -s is specified
         set -q _flag_show_status
@@ -63,22 +64,27 @@ function breeze
         printf "%s\t%s\n" (string split ':' $__breeze_light_subcommands)
 
     else
-        printf "Usage: breeze <COMMAND> [COMMAND OPTIONS]\n\n"
-        printf "COMMAND: %s\n" "status"
-        printf "         %s\t\n" "add [-s|--show-status] [-m <COMMIT_MSG>]"
+        printf "Usage: breeze <COMMAND>\n"
+        printf "       breeze add [-s|--show-status] [--dry] [-m <COMMIT_MSG>]\n"
         printf "\n"
-        printf "%-8s\t%s\n" (string split ':' $__breeze_light_subcommands)
+        printf "COMMAND:\n"
+        printf "  %-8s\t%s\n" (string split ':' $__breeze_light_subcommands)
         printf "\n"
         printf "OPTIONS:\n"
-        printf "%s\n" "-s --show-status"
-        printf "\t%s\n" "Display status afterwards, for easy reference."
-        printf "%s\n" "-m"
-        printf "\t%s\n" "Immediately commit, and everything after this flag will the message."
+        printf "  -s --show-status  %s\n" "Display status afterwards, for easy reference."
+        printf "  --dry             %s\n" "Echo what will be performed, but don't do anything."
+        printf "  -m                %s\n" "Immediately commit, and everything after this flag will the message."
         printf "\n"
-        printf "NUMERIC EXAMPLE: [numeric|comma separated|range|filename]\n"
-        printf "\tbreeze add 1 2 4\n"
-        printf "\tbreeze add 4,5 7-11 13-14\n"
-        printf "\tbreeze add 2 3 foobar\n"
+        printf "NUMERIC: [numeric|comma separated|range|filename]\n"
+        printf "\n"
+        printf "EXAMPLE:\n"
+        printf "    breeze add 1 2 4\n"
+        printf "    breeze add 4,5 7-11 13-14\n"
+        printf "    breeze add 3 foobar          (Add 3rd on list, and the file 'foobar')\n"
+        printf "    breeze add -3                (Implies [1-3])\n"
+        printf "    breeze add 3-                (Implies [3] till end of list)\n"
+        printf "    breeze add 4 -m add README   (Add [4]; after succeeded, commit with msg 'add README')\n"
+        printf "    breeze add 2 -p              (Add [2] with git's patch flag '-p')\n"
         return 1
     end
 
