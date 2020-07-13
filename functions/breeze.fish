@@ -164,6 +164,9 @@ function __breeze_light_show_status -d "add numeric to git status"
             set -l idx -1
             for i in (seq 1 (count $file_names))
                 set -l file $file_names[$i]
+                # remove surrounding double quotes if exists
+                set -l file_wo_quote (string replace -r '^["](.*)["]$' '$1' $file)
+                and set -l file $file_wo_quote
                 # find a file that has the maximum matched characters
                 if string match -q "*$file*" "$line"
                     set -l _tmp_length (string length -- $file)
