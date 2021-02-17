@@ -136,8 +136,6 @@ end
 function __breeze_light_show_status -d "add numeric to git status"
     # if true, place [n] in front of the filename
     # else, place in front of the entire status.
-    set -q __fish_breeze_show_num_before_fname
-    or set -g __fish_breeze_show_num_before_fname "false"
 
     set -l file_names (__breeze_light_get_filelist)
     set -l num_files (count $file_names)
@@ -179,7 +177,7 @@ function __breeze_light_show_status -d "add numeric to git status"
                 continue
             end
 
-            if test $__fish_breeze_show_num_before_fname = "true"
+            if test "$__fish_breeze_show_num_before_fname" = "true"
                 # This is to place number right before the filename
                 string replace -f "$file" "[$idx] $file" $line
 
