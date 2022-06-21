@@ -47,6 +47,8 @@ function breeze
             __breeze_light_color_echo "> Running: $cmd"
             not set -q _flag_dry
             and eval "$cmd"
+        else
+            return
         end
         test $status -eq 0
         or return $status
@@ -160,6 +162,9 @@ function __breeze_light_show_status -d "add numeric to git status"
             set -l idx -1
             for i in (seq 1 (count $file_names))
                 set -l file $file_names[$i]
+                # remove surrounding double quotes if exists
+                set -l file_wo_quote (string replace -r '^["](.*)["]$' '$1' $file)
+                and set -l file $file_wo_quote
                 # find a file that has the maximum matched characters
                 if string match -q "*$file*" "$line"
                     set -l _tmp_length (string length -- $file)
@@ -241,13 +246,20 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
         return 0
     end
 
+    function __breeze_light_echo_file_with_quote
+        # if there are space(s) within the arg, add surrounding quotes
+        string match -qr -- '^[^\'"].*[ ].*[^\'"]$' "$argv[1]"
+        and set -l argv[1] "'$argv[1]'"
+        echo $argv[1]
+    end
+
     function __breeze_light_echo_range_files
         set -l start_n $argv[1]
         set -l end_n $argv[2]
         set -e argv[1]
         set -e argv[1]
         for i in (seq $start_n $end_n)
-            echo $argv[$i]
+            __breeze_light_echo_file_with_quote $argv[$i]
         end
     end
     # set -l num_files $argv[1]
@@ -263,7 +275,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
             
-            echo $file_names[$arg]
+            __breeze_light_echo_file_with_quote $file_names[$arg]
 
         # for case n-m
         else if string match -q -r -- '^[0-9]+-[0-9]+$' $arg
@@ -303,6 +315,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
         # probably is file name
         else
+            # we won't need to use __breeze_light_echo_file_with_quote as its user input
             echo $arg
         end
 
