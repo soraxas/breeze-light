@@ -247,10 +247,18 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
     end
 
     function __breeze_light_echo_file_with_quote
-        # if there are space(s) within the arg, add surrounding quotes
-        string match -qr -- '^[^\'"].*[ ].*[^\'"]$' "$argv[1]"
-        and set -l argv[1] "'$argv[1]'"
-        echo $argv[1]
+        # # if there are space(s) within the arg, add surrounding quotes
+        # string match -qr -- '^[^\'"].*[ ].*[^\'"]$' "$argv[1]"
+        # and set -l argv[1] "'$argv[1]'"
+        #
+        # if there are surrounding double quotes (newer git version adds
+        # quotes for git status --short), remove them, as fish echo do 
+        # not need to be nazi quotes.
+        if string match -qr -- '^"[^"]*"$' "$argv[1]"
+          string sub --start 2 --length (math (string length -- $argv[1])"-2") $argv[1]
+        else
+          echo $argv[1]
+        end
     end
 
     function __breeze_light_echo_range_files
