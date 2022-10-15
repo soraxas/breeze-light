@@ -16,30 +16,30 @@ function breeze
         echo -e $argv
         set_color normal
     end
-    
-    if test "$cmd" = "status"
+
+    if test "$cmd" = status
         __breeze_light_show_status
 
-    else if test "$cmd" = "diff"
+    else if test "$cmd" = diff
         git diff (__breeze_light_parse_user_input $argv)
 
-    else if test "$cmd" = "checkout"
+    else if test "$cmd" = checkout
         git checkout (__breeze_light_parse_user_input $argv)
-    
-    else if test "$cmd" = "add"
 
-        argparse --ignore-unknown 's/show-status' 'd-dry' -- $argv
+    else if test "$cmd" = add
+
+        argparse --ignore-unknown s/show-status d-dry -- $argv
 
         # check for message flag
         set -l msg_idx (contains --index -- '-m' $argv)
-        if test -n  "$msg_idx"
+        if test -n "$msg_idx"
             if test $msg_idx -lt (count $argv)
                 # there are messages after the -m message. (sanity check)
                 set commit_msg $argv[(math "$msg_idx + 1")..-1]
                 set argv -- $argv[1..(math "$msg_idx - 1")]
             end
         end
-        
+
         # add if it is non-empty
         set -l target_files (__breeze_light_parse_user_input $argv)
         if test -n "$target_files"
@@ -52,7 +52,7 @@ function breeze
         end
         test $status -eq 0
         or return $status
-        
+
         # perform commit with the message being all args after the flag
         if set -q commit_msg
             __breeze_light_color_echo "> Running: git commit -sm \"$commit_msg\""
@@ -67,7 +67,7 @@ function breeze
             and __breeze_light_show_status
         end
 
-    else if test "$cmd" = "_complete"
+    else if test "$cmd" = _complete
         printf "%s\t%s\n" (string split ':' $__breeze_light_subcommands)
 
     else
@@ -182,7 +182,7 @@ function __breeze_light_show_status -d "add numeric to git status"
                 continue
             end
 
-            if test "$__fish_breeze_show_num_before_fname" = "true"
+            if test "$__fish_breeze_show_num_before_fname" = true
                 # This is to place number right before the filename
                 string replace -f "$file" "[$idx] $file" $line
 
@@ -230,7 +230,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
     function __breeze_light_sanity_chk_end_num
         set -l num_files $argv[2]
-        if not test $argv[1] -le $num_files 
+        if not test $argv[1] -le $num_files
             echo "[ERROR]: ending num '$argv[1]' must be <= range '$num_files'. Skipping." 1>&2
             return 1
         end
@@ -247,21 +247,21 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
     end
 
     function __breeze_light_echo_file_with_quote
-        # # if there are space(s) within the arg, add surrounding quotes
-        # string match -qr -- '^[^\'"].*[ ].*[^\'"]$' "$argv[1]"
-        # and set -l argv[1] "'$argv[1]'"
-        #
         # if there are surrounding double quotes (newer git version adds
-        # quotes for git status --short), remove them, as fish echo do 
+        # quotes for git status --short), remove them, as fish echo do
         # not need to be nazi quotes.
         if string match -qr -- '^"[^"]*"$' "$argv[1]"
-          string sub --start 2 --length (math (string length -- $argv[1])"-2") $argv[1]
-        else
-          echo $argv[1]
+            set argv[1] string sub --start 2 --length (math (string length -- $argv[1])"-2") $argv[1]
         end
+        # if there are space(s) within the arg, add surrounding quotes
+        if string match -qr -- '^[^\'"].*[ ].*[^\'"]$' "$argv[1]"
+            set argv[1] "'$argv[1]'"
+        end
+
+        echo $argv[1]
     end
 
-    function __breeze_light_echo_range_files
+    function __breeze_light_echo_rangme_files
         set -l start_n $argv[1]
         set -l end_n $argv[2]
         set -e argv[1]
@@ -282,10 +282,10 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             or continue
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
-            
+
             __breeze_light_echo_file_with_quote $file_names[$arg]
 
-        # for case n-m
+            # for case n-m
         else if string match -q -r -- '^[0-9]+-[0-9]+$' $arg
             set -l idxes (string split '-' $arg)
             __breeze_light_sanity_chk_start_end_num $idxes[1] $idxes[2]
@@ -297,7 +297,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
             __breeze_light_echo_range_files $idxes[1] $idxes[2] $file_names
 
-        # for case n- (implied end)
+            # for case n- (implied end)
         else if string match -q -r -- '^[0-9]+-$' $arg
             # ensure n is > 0
             set arg (string sub --length (math (string length -- $arg)"-1") -- $arg)
@@ -306,10 +306,10 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             or continue
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
-          
+
             __breeze_light_echo_range_files $arg $num_files $file_names
 
-        # for case -m (implied start)
+            # for case -m (implied start)
         else if string match -q -r -- '^-[0-9]+$' $arg
             # ensure m is < num_files
             set arg (string sub --start 2 -- $arg)
@@ -318,10 +318,10 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
             or continue
             __breeze_light_sanity_chk_end_num $arg $num_files
             or continue
-          
+
             __breeze_light_echo_range_files 1 $arg $file_names
 
-        # probably is file name
+            # probably is file name
         else
             # we won't need to use __breeze_light_echo_file_with_quote as its user input
             echo $arg
