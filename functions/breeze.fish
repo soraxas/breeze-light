@@ -4,6 +4,7 @@ set __breeze_light_subcommands \
     "add:Git add with numeric number" \
     "checkout:Git checkout with numeric number" \
     "diff:Git diff with numeric number" \
+    "stash:Git stash with numeric number" \
     "_complete:Print out completions string"
 
 # main function
@@ -22,6 +23,9 @@ function breeze
 
     else if test "$cmd" = diff
         git diff (__breeze_light_parse_user_input $argv)
+
+    else if test "$cmd" = stash
+        git stash $argv[1] (__breeze_light_parse_user_input $argv[2..])
 
     else if test "$cmd" = checkout
         git checkout (__breeze_light_parse_user_input $argv)
