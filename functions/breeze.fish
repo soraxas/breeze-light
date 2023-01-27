@@ -265,7 +265,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
         echo $argv[1]
     end
 
-    function __breeze_light_echo_rangme_files
+    function __breeze_light_echo_range_files
         set -l start_n $argv[1]
         set -l end_n $argv[2]
         set -e argv[1]
