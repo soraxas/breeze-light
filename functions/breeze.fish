@@ -1,14 +1,18 @@
 
-set __breeze_light_subcommands \
+set -l __breeze_light_supported_numeric_subcommands \
+    diff stash checkout add mv rm restore reset log
+set -l __breeze_light_supported_numeric_subcommands (string join0 $__breeze_light_supported_numeric_subcommands | sort -z | string split0)
+
+set -l __breeze_light_subcommands \
     "status:Git status with numeric number inserted" \
-    "add:Git add with numeric number" \
-    "checkout:Git checkout with numeric number" \
-    "diff:Git diff with numeric number" \
-    "stash:Git stash with numeric number" \
+    "_show_files:Display the internal file list in breeze" \
     "_complete:Print out completions string"
 
 # main function
-function breeze
+function breeze \
+    --inherit-variable __breeze_light_supported_numeric_subcommands \
+    --inherit-variable __breeze_light_subcommands
+
     set -l cmd $argv[1]
     set -e argv[1]
 
@@ -20,15 +24,6 @@ function breeze
 
     if test "$cmd" = status
         __breeze_light_show_status
-
-    else if test "$cmd" = diff
-        git diff (__breeze_light_parse_user_input $argv)
-
-    else if test "$cmd" = stash
-        git stash $argv[1] (__breeze_light_parse_user_input $argv[2..])
-
-    else if test "$cmd" = checkout
-        git checkout (__breeze_light_parse_user_input $argv)
 
     else if test "$cmd" = add
 
@@ -71,15 +66,27 @@ function breeze
             and __breeze_light_show_status
         end
 
-    else if test "$cmd" = _complete
-        printf "%s\t%s\n" (string split ':' $__breeze_light_subcommands)
+    else if string match "$cmd" $__breeze_light_supported_numeric_subcommands
+        # it's important for this to be a fallback (after the previous specialised cmds)
+        git "$cmd" (__breeze_light_parse_user_input $argv)
 
+    else if test "$cmd" = _complete
+        printf "%s\tPassthrough (replaces numeric)\n" $__breeze_light_supported_numeric_subcommands
+        printf "%s\t%s\n" (string split ':' $__breeze_light_subcommands)
+    else if test "$cmd" = _show_files
+        set -l i 1
+        set -l fnames (__breeze_light_get_filelist)
+        or return
+        for fname in $fnames
+            printf '[%i] %s\n' $i "$fname"
+            set i (math "$i + 1")
+        end
     else
         printf "Usage: breeze <COMMAND>\n"
         printf "       breeze add [-s|--show-status] [--dry] [-m <COMMIT_MSG>]\n"
         printf "\n"
         printf "COMMAND:\n"
-        printf "  %-8s\t%s\n" (string split ':' $__breeze_light_subcommands)
+        printf "\t%-8s\t%s\n" (eval (status current-function) _complete | string replace -r '\t' '\n')
         printf "\n"
         printf "OPTIONS:\n"
         printf "  -s --show-status  %s\n" "Display status afterwards, for easy reference."
@@ -92,10 +99,12 @@ function breeze
         printf "    breeze add 1 2 4\n"
         printf "    breeze add 4,5 7-11 13-14\n"
         printf "    breeze add 3 foobar          (Add 3rd on list, and the file 'foobar')\n"
-        printf "    breeze add -3                (Implies [1-3])\n"
-        printf "    breeze add 3-                (Implies [3] till end of list)\n"
+        # printf "    breeze add -3                (Implies [1-3])\n"
+        # printf "    breeze add 3-                (Implies [3] till end of list)\n"
         printf "    breeze add 4 -m add README   (Add [4]; after succeeded, commit with msg 'add README')\n"
-        printf "    breeze add 2 -p              (Add [2] with git's patch flag '-p')\n"
+        printf "    breeze add 2 -p              (Add [2] with git's patch flag '-p') \n"
+        printf " breeze rm 5 --cached (remove [5] with cached option)\n"
+        printf " breeze mv 1 new_file (rename [1] to new_file)\n"
         return 1
     end
 
@@ -120,6 +129,7 @@ function __breeze_light_get_filelist -d "retrieve list of files from this repo"
     # set -l file_names (git status --porcelain | string sub --start 4)
     # Going to use git status short instead, as it supports relative path
     set -l file_names (git status --short | string sub --start 4)
+    or return $status
     # if a file is renamed, it will be shown as XXXXX -> YYYYYY
     # add the two to file list as well.
     set -l i 1
@@ -129,6 +139,7 @@ function __breeze_light_get_filelist -d "retrieve list of files from this repo"
         set -l try_split (string split -- ' -> ' $file_names[$i])
         if test (count $try_split) -eq 2
             # append both to end of list
+            set -e file_names[$i] # remove this non-file
             set -a file_names $try_split[1]
             set -a file_names $try_split[2]
         end
@@ -301,6 +312,11 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
             __breeze_light_echo_range_files $idxes[1] $idxes[2] $file_names
 
+            ########################################
+            # we want to make breeze works with arbitary pass-through options
+            # so we will not support implies start. And maybe not implied end?
+            ########################################
+
             # for case n- (implied end)
         else if string match -q -r -- '^[0-9]+-$' $arg
             # ensure n is > 0
@@ -313,19 +329,19 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
             __breeze_light_echo_range_files $arg $num_files $file_names
 
-            # for case -m (implied start)
-        else if string match -q -r -- '^-[0-9]+$' $arg
-            # ensure m is < num_files
-            set arg (string sub --start 2 -- $arg)
+            #     # for case -m (implied start)
+            # else if string match -q -r -- '^-[0-9]+$' $arg
+            #     # ensure m is < num_files
+            #     set arg (string sub --start 2 -- $arg)
 
-            __breeze_light_sanity_chk_start_num $arg
-            or continue
-            __breeze_light_sanity_chk_end_num $arg $num_files
-            or continue
+            #     __breeze_light_sanity_chk_start_num $arg
+            #     or continue
+            #     __breeze_light_sanity_chk_end_num $arg $num_files
+            #     or continue
 
-            __breeze_light_echo_range_files 1 $arg $file_names
+            #     __breeze_light_echo_range_files 1 $arg $file_names
 
-            # probably is file name
+            #     # probably is file name
         else
             # we won't need to use __breeze_light_echo_file_with_quote as its user input
             echo $arg
