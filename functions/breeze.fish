@@ -103,8 +103,8 @@ function breeze \
         # printf "    breeze add 3-                (Implies [3] till end of list)\n"
         printf "    breeze add 4 -m add README   (Add [4]; after succeeded, commit with msg 'add README')\n"
         printf "    breeze add 2 -p              (Add [2] with git's patch flag '-p') \n"
-        printf " breeze rm 5 --cached (remove [5] with cached option)\n"
-        printf " breeze mv 1 new_file (rename [1] to new_file)\n"
+        printf "    breeze rm 5 --cached         (remove [5] with cached option)\n"
+        printf "    breeze mv 1 NEW_NAME         (rename [1] to new_file)\n"
         return 1
     end
 
