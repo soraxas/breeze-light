@@ -13,6 +13,8 @@ function breeze \
     --inherit-variable __breeze_light_supported_numeric_subcommands \
     --inherit-variable __breeze_light_subcommands
 
+    argparse --ignore-unknown s/show-status d-dry -- $argv
+
     set -l cmd $argv[1]
     set -e argv[1]
 
@@ -26,8 +28,6 @@ function breeze \
         __breeze_light_show_status
 
     else if test "$cmd" = add
-
-        argparse --ignore-unknown s/show-status d-dry -- $argv
 
         # check for message flag
         set -l msg_idx (contains --index -- '-m' $argv)
@@ -66,9 +66,12 @@ function breeze \
             and __breeze_light_show_status
         end
 
-    else if string match "$cmd" $__breeze_light_supported_numeric_subcommands
+    else if string match -q "$cmd" $__breeze_light_supported_numeric_subcommands
         # it's important for this to be a fallback (after the previous specialised cmds)
-        git "$cmd" (__breeze_light_parse_user_input $argv)
+        set -l cmd git "$cmd" (__breeze_light_parse_user_input $argv)
+        __breeze_light_color_echo "> Running: $cmd"
+        not set -q _flag_dry
+        and eval "$cmd"
 
     else if test "$cmd" = _complete
         printf "%s\tPassthrough (replaces numeric)\n" $__breeze_light_supported_numeric_subcommands
