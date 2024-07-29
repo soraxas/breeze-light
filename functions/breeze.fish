@@ -41,14 +41,16 @@ function breeze \
 
         # add if it is non-empty
         set -l target_files (__breeze_light_parse_user_input $argv)
-        if test -n "$target_files"
-            set -l cmd git add $target_files
-            __breeze_light_color_echo "> Running: $cmd"
-            not set -q _flag_dry
-            and eval "$cmd"
-        else
-            return
+        if test -z "$target_files"
+            __breeze_light_color_echo "No files to add."
+            return 1
         end
+
+        set -l cmd git add $target_files
+        __breeze_light_color_echo "> Running: $cmd"
+        not set -q _flag_dry
+        and eval "$cmd"
+
         test $status -eq 0
         or return $status
 
