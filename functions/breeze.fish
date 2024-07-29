@@ -20,7 +20,7 @@ function breeze \
 
     function __breeze_light_color_echo
         set_color green
-        echo -e $argv
+        echo -e $argv 1>&2
         set_color normal
     end
 
