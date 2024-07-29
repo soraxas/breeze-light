@@ -348,8 +348,7 @@ function __breeze_light_parse_user_input -d "parse user's numeric input to breez
 
             #     # probably is file name
         else
-            # we won't need to use __breeze_light_echo_file_with_quote as its user input
-            echo $arg
+            __breeze_light_echo_file_with_quote $arg
         end
 
     end
