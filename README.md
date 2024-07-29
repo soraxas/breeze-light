@@ -1,7 +1,7 @@
 
 # Install
 ```sh
-fisher add soraxas/breeze-light
+fisher install soraxas/breeze-light
 ```
 
 # Known bug
