@@ -213,6 +213,9 @@ function __breeze_light_show_status -d "add numeric to git status"
             # the follow line remove all ANSI escape color code
             # https://stackoverflow.com/questions/14693701/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
             set -l clean_line (string replace -ra -- '\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])' '' (string trim -- $line))
+            # trim potential prefix (e.g. modified:)
+            # or potential suffix (e.g. (new commits) for submodules)
+            set clean_line (string replace -ra -- '(^\s*modified:\s)|(\s\(new commits\)\s*$)' '' $clean_line)
 
             set -l line_parts -- (string split -- ' ' $clean_line)
             set -l line_parts_n (count $line_parts)
@@ -232,7 +235,7 @@ function __breeze_light_show_status -d "add numeric to git status"
                 continue
             end
 
-           ################################################
+            ################################################
 
             if test "$__fish_breeze_show_num_before_fname" = true
                 # This is to place number right before the filename
