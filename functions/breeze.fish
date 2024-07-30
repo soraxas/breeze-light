@@ -162,6 +162,15 @@ function __breeze_light_show_status -d "add numeric to git status"
     set -l file_names (__breeze_light_get_filelist)
     set -l num_files (count $file_names)
 
+    # prepare a list of file names without surrounding double quotes
+    set -l file_names_wo_quote
+    for file in $file_names
+        # remove surrounding double quotes if exists
+        set -l file_wo_quote (string replace -r -- '^["](.*)["]$' '$1' $file)
+        and set -l file $file_wo_quote
+        set -a file_names_wo_quote $file
+    end
+
     for line in (git -c color.status=always status)
         # A line that contains information about a gitfile will either be:
         #                 foo            <- for untracked
@@ -177,21 +186,42 @@ function __breeze_light_show_status -d "add numeric to git status"
 
             # loop through the list of file and find exact match
 
-            # keep track of the highest matched fname
-            set -l max_match_length 0
+            ################################################
+            # (1) Method: looping to find highest matched file (old method)
+            # # keep track of the highest matched fname
+            # set -l max_match_length 0
             set -l idx -1
-            for i in (seq 1 (count $file_names))
-                set -l file $file_names[$i]
-                # remove surrounding double quotes if exists
-                set -l file_wo_quote (string replace -r -- '^["](.*)["]$' '$1' $file)
-                and set -l file $file_wo_quote
-                # find a file that has the maximum matched characters
-                if string match -q "*$file*" "$line"
-                    set -l _tmp_length (string length -- $file)
-                    if test $_tmp_length -gt $max_match_length
-                        set max_match_length $_tmp_length
-                        set idx $i
-                    end
+            # for i in (seq 1 (count $file_names_wo_quote))
+            #     set -l file $file_names_wo_quote[$i]
+            #     # find a file that has the maximum matched characters
+            #     if string match -q "*$file*" "$line"
+            #         set -l _tmp_length (string length -- $file)
+            #         if test $_tmp_length -gt $max_match_length
+            #             set max_match_length $_tmp_length
+            #             set idx $i
+            #         end
+            #     end
+            # end
+            ################################################
+            # (2) Method: using hashmap-like approach (to speed up)
+            # This no longer use glob-search, but with exact match
+            # we will do this by first splitting the line into line parts
+            # and process it by progressively re-joining the parts
+            # (that's because the prefix always are at the start of the line)
+            # e.g. modified is at the start, whereas untracked files has no prefix
+
+            # the follow line remove all ANSI escape color code
+            # https://stackoverflow.com/questions/14693701/how-can-i-remove-the-ansi-escape-sequences-from-a-string-in-python
+            set -l clean_line (string replace -ra -- '\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])' '' (string trim -- $line))
+
+            set -l line_parts -- (string split -- ' ' $clean_line)
+            set -l line_parts_n (count $line_parts)
+            for i in (seq 1 $line_parts_n)
+                set -l -- sub_line "$line_parts[$i..$line_parts_n]"
+                if set __idx (contains -i -- "$sub_line" $file_names_wo_quote) # `set` won't modify $status, so this succeeds if `contains` succeeds
+                    # find a matching file, most likely
+                    set idx $__idx
+                    break
                 end
             end
 
@@ -201,6 +231,8 @@ function __breeze_light_show_status -d "add numeric to git status"
                 echo $line
                 continue
             end
+
+           ################################################
 
             if test "$__fish_breeze_show_num_before_fname" = true
                 # This is to place number right before the filename
